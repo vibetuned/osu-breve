@@ -1,5 +1,9 @@
 # Builds osu!breve for every tag pushed, and publishes the ruleset's DLL as a GitHub release for that tag.
 # The tag gives the version: v2026.1031.0 and 2026.1031.0 both build version 2026.1031.0.
+#
+# To release:
+#   git tag v2026.1031.0
+#   git push origin v2026.1031.0
 name: Release
 
 on:

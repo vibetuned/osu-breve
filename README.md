@@ -48,33 +48,9 @@ This works with osu! on Windows, macOS and Linux. osu! on iOS and Android can't 
 
 Each release says which osu! release it was built against. osu! refuses rulesets built for an older ruleset API, so after some osu! updates osu!breve stops loading until a new release of it is built.
 
-## Building
+## Contributing
 
-You need the [.NET 10 SDK](https://dotnet.microsoft.com/download).
-
-```sh
-dotnet build                      # builds the ruleset, its tests and the showcase
-dotnet test                       # runs the tests
-dotnet run --project osu.Game.Rulesets.Breve.Tests   # opens osu!'s test browser, to play the test scenes
-```
-
-The DLL is built to `osu.Game.Rulesets.Breve/bin/Debug/net10.0/`.
-
-osu!breve is built against the osu! release set by `OsuVersion` in [Directory.Build.props](Directory.Build.props). It follows osu!'s code style and analysis rules, from osu!'s [.editorconfig](.editorconfig) and [CodeAnalysis](CodeAnalysis) folder.
-
-### Remaking the media
-
-The GIF, video and screenshots in [media](media) are made by [scripts/make-media.sh](scripts/make-media.sh). It plays a short showcase beatmap with autoplay in a window, captures every frame at 60 fps, and turns the frames into the video, the GIF and the screenshots. Run it again after changing how osu!breve looks. It takes about two minutes, and needs [ffmpeg](https://ffmpeg.org) and [ImageMagick](https://imagemagick.org).
-
-The showcase beatmap and the capture are in [osu.Game.Rulesets.Breve.Showcase](osu.Game.Rulesets.Breve.Showcase). To check a change without remaking everything, capture a stretch of it, with times in milliseconds:
-
-```sh
-dotnet run --project osu.Game.Rulesets.Breve.Showcase -- frames 7000 8000
-```
-
-## Releasing
-
-Push a tag named after the version, such as `v2026.1031.0`. The [release workflow](.github/workflows/release.yml) runs the tests, builds the DLL with that version, and publishes it as a GitHub release for the tag. If you make the release on GitHub's website instead, the workflow adds the DLL to it.
+To build osu!breve, run its tests, or find your way around its code, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
