@@ -1,0 +1,24 @@
+# Build results
+bin/
+obj/
+artifacts/
+
+# Frames captured by osu.Game.Rulesets.Breve.Showcase
+/frames/
+
+# Test results
+TestResults/
+*.trx
+*.VisualState.xml
+
+# IDEs and editors
+.vs/
+.idea/
+.vscode/
+*.user
+*.suo
+*.userprefs
+*.DotSettings.user
+
+# macOS
+.DS_Store

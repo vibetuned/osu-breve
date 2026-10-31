@@ -1,0 +1,49 @@
+<!-- Contains the properties shared by osu!breve's projects. They follow osu!'s own, so that osu!breve is held to the same rules as osu!'s rulesets. -->
+<Project>
+  <PropertyGroup Label="osu!">
+    <!-- The osu! release osu!breve is built against. osu! only loads rulesets built for its current ruleset API version,
+         so a release of osu!breve keeps working in newer osu! releases until osu! changes that version, and then needs rebuilding against a newer osu!. -->
+    <OsuVersion>2026.1026.0</OsuVersion>
+  </PropertyGroup>
+  <PropertyGroup Label="NuGet">
+    <!-- Only audits osu!breve's own dependencies. osu!'s are osu!'s to update, and ship with osu! rather than with osu!breve. -->
+    <NuGetAuditMode>direct</NuGetAuditMode>
+  </PropertyGroup>
+  <PropertyGroup Label="C#">
+    <LangVersion>14.0</LangVersion>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationManifest>$(MSBuildThisFileDirectory)app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <ItemGroup Label="Code Analysis">
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="3.3.4" PrivateAssets="All" />
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)CodeAnalysis\BannedSymbols.txt" />
+    <!-- Rider compatibility: .globalconfig needs to be explicitly referenced instead of using the global file name. -->
+    <GlobalAnalyzerConfigFiles Include="$(MSBuildThisFileDirectory)CodeAnalysis\osu.globalconfig" />
+  </ItemGroup>
+  <PropertyGroup Label="Code Analysis">
+    <AnalysisMode>Default</AnalysisMode>
+    <AnalysisModeDesign>Default</AnalysisModeDesign>
+    <AnalysisModeDocumentation>Recommended</AnalysisModeDocumentation>
+    <AnalysisModeGlobalization>Recommended</AnalysisModeGlobalization>
+    <AnalysisModeInteroperability>Recommended</AnalysisModeInteroperability>
+    <AnalysisModeMaintainability>Recommended</AnalysisModeMaintainability>
+    <AnalysisModeNaming>Default</AnalysisModeNaming>
+    <AnalysisModePerformance>Minimum</AnalysisModePerformance>
+    <AnalysisModeReliability>Recommended</AnalysisModeReliability>
+    <AnalysisModeSecurity>Default</AnalysisModeSecurity>
+    <AnalysisModeUsage>Default</AnalysisModeUsage>
+  </PropertyGroup>
+  <PropertyGroup Label="Documentation">
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Label="Package">
+    <IsPackable>false</IsPackable>
+    <Authors>Pedro Fillastre</Authors>
+    <Company>Pedro Fillastre</Company>
+    <Copyright>Copyright (c) 2026 Pedro Fillastre</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+</Project>

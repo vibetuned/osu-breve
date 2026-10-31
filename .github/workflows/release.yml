@@ -1,0 +1,46 @@
+# Builds osu!breve for every tag pushed, and publishes the ruleset's DLL as a GitHub release for that tag.
+# The tag gives the version: v2026.1031.0 and 2026.1031.0 both build version 2026.1031.0.
+name: Release
+
+on:
+  push:
+    tags:
+      - "*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install .NET 10.0.x
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Test
+        run: dotnet test osu.Game.Rulesets.Breve.sln -c Release -- NUnit.ConsoleOut=0
+
+      - name: Build
+        run: dotnet build osu.Game.Rulesets.Breve/osu.Game.Rulesets.Breve.csproj -c Release -p:Version="${GITHUB_REF_NAME#v}"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DLL: osu.Game.Rulesets.Breve/bin/Release/net10.0/osu.Game.Rulesets.Breve.dll
+        # A release made on GitHub's website creates its tag, which runs this workflow too: the DLL is then added to that release.
+        run: |
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "$DLL" --clobber
+          else
+            OSU_VERSION=$(dotnet msbuild osu.Game.Rulesets.Breve/osu.Game.Rulesets.Breve.csproj -getProperty:OsuVersion)
+            gh release create "$GITHUB_REF_NAME" "$DLL" --verify-tag --title "osu!breve $GITHUB_REF_NAME" \
+              --notes "Built against osu! $OSU_VERSION. Put \`osu.Game.Rulesets.Breve.dll\` in the \`rulesets\` folder of osu!'s folder, then restart osu!." \
+              --generate-notes
+          fi

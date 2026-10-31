@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup Label="Project">
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Description>Captures the showcase in the README: autoplay playing a short beatmap with every kind of note.</Description>
+  </PropertyGroup>
+  <ItemGroup Label="Project References">
+    <ProjectReference Include="..\osu.Game.Rulesets.Breve\osu.Game.Rulesets.Breve.csproj"/>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup Label="Project">
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <StartupObject>osu.Game.Rulesets.Breve.Tests.VisualTestRunner</StartupObject>
+    <GenerateProgramFile>false</GenerateProgramFile>
+  </PropertyGroup>
+  <ItemGroup Label="Package References">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.0"/>
+    <PackageReference Include="NUnit" Version="4.6.1"/>
+    <PackageReference Include="NUnit3TestAdapter" Version="6.3.0"/>
+    <!-- osu!breve plays converted osu! beatmaps, which the full game can only import and list when the osu! ruleset is present. -->
+    <PackageReference Include="ppy.osu.Game.Rulesets.Osu" Version="$(OsuVersion)"/>
+  </ItemGroup>
+  <ItemGroup Label="Project References">
+    <ProjectReference Include="..\osu.Game.Rulesets.Breve\osu.Game.Rulesets.Breve.csproj"/>
+  </ItemGroup>
+</Project>
