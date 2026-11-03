@@ -35,11 +35,28 @@ namespace osu.Game.Rulesets.Breve.UI
         /// </summary>
         public const int LANE_COUNT = 9;
 
+        /// <summary>
+        /// Whether to show the <see cref="BorderLines"/> where the scan line turns around. They're hidden unless a mod shows them.
+        /// </summary>
+        public bool ShowBorderLines
+        {
+            get => borderLines.Alpha > 0;
+            set => borderLines.Alpha = value ? 1 : 0;
+        }
+
         private readonly PageTiming pageTiming;
+
+        // Mods are applied once the playfield has loaded, so the border lines are always there to be shown.
+        private readonly BorderLines borderLines;
+
+        [Cached]
+        private readonly LaneActivity laneActivity = new LaneActivity();
 
         public BrevePlayfield(PageTiming pageTiming)
         {
             this.pageTiming = pageTiming;
+
+            borderLines = new BorderLines(pageTiming) { Alpha = 0 };
         }
 
         [BackgroundDependencyLoader]
@@ -47,14 +64,18 @@ namespace osu.Game.Rulesets.Breve.UI
         {
             AddRangeInternal(new Drawable[]
             {
+                borderLines,
                 new ScanLine(pageTiming),
                 HitObjectContainer,
+                // In front of the notes, so that it sees every lane press before they do.
+                laneActivity,
                 new TouchLaneMapper(),
             });
 
             RegisterPool<Tap, DrawableTap>(20, 100);
             RegisterPool<Hold, DrawableHold>(10, 50);
             RegisterPool<DragNode, DrawableDragNode>(50, 300);
+            RegisterPool<Flick, DrawableFlick>(10, 50);
         }
 
         /// <summary>

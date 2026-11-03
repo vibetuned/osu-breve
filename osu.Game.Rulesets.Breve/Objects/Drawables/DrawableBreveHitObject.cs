@@ -43,7 +43,12 @@ namespace osu.Game.Rulesets.Breve.Objects.Drawables
         /// <summary>
         /// Whether a lane's key is currently held, or a finger is on the lane.
         /// </summary>
-        protected bool IsLaneHeld(int lane) => pressedActions.Contains(BreveAction.Lane1 + lane);
+        protected bool IsLaneHeld(int lane) => IsPressed(BreveAction.Lane1 + lane);
+
+        /// <summary>
+        /// Whether an action is currently pressed.
+        /// </summary>
+        protected bool IsPressed(BreveAction action) => pressedActions.Contains(action);
 
         private IEnumerable<BreveAction> pressedActions
         {

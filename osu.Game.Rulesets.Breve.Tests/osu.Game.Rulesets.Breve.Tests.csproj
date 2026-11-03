@@ -9,8 +9,13 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.0"/>
     <PackageReference Include="NUnit" Version="4.6.1"/>
     <PackageReference Include="NUnit3TestAdapter" Version="6.3.0"/>
-    <!-- osu!breve plays converted osu! beatmaps, which the full game can only import and list when the osu! ruleset is present. -->
+  </ItemGroup>
+  <!-- osu!breve plays converted osu! beatmaps, which the full game can only import and list when the osu! ruleset is present. -->
+  <ItemGroup Condition="'$(OsuRepository)' == ''">
     <PackageReference Include="ppy.osu.Game.Rulesets.Osu" Version="$(OsuVersion)"/>
+  </ItemGroup>
+  <ItemGroup Condition="'$(OsuRepository)' != ''">
+    <ProjectReference Include="$(OsuRepository)osu.Game.Rulesets.Osu\osu.Game.Rulesets.Osu.csproj"/>
   </ItemGroup>
   <ItemGroup Label="Project References">
     <ProjectReference Include="..\osu.Game.Rulesets.Breve\osu.Game.Rulesets.Breve.csproj"/>

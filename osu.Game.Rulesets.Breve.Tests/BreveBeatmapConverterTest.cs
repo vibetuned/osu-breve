@@ -318,6 +318,70 @@ namespace osu.Game.Rulesets.Breve.Tests
             Assert.That(spinnerHold.Samples, Is.EqualTo(spinner.Samples));
         }
 
+        [Test]
+        public void TestFlicksTurnShortSlidersIntoFlicks()
+        {
+            var converted = convert(NoteTypesBeatmap.Create(new OsuRuleset().RulesetInfo), flicks: true);
+
+            // Both sliders move to the right, so their flicks are between their head's lane and the next one.
+            assertFlickBetween(noteAt(converted, NoteTypesBeatmap.ZIGZAG_TIME), 1);
+            assertFlickBetween(noteAt(converted, NoteTypesBeatmap.SHORT_SLIDER_TIME), 4);
+
+            Assert.That(noteAt(converted, NoteTypesBeatmap.CIRCLE_TIME), Is.TypeOf<Tap>(), "circles stay taps");
+            Assert.That(noteAt(converted, NoteTypesBeatmap.BEAT_SLIDER_TIME), Is.TypeOf<Tap>(), "sliders long enough to zigzag still do");
+        }
+
+        [Test]
+        public void TestExpertKeepsZigzagsWithFlicks()
+        {
+            var converted = convert(NoteTypesBeatmap.Create(new OsuRuleset().RulesetInfo), expert: true, flicks: true);
+
+            Assert.That(noteAt(converted, NoteTypesBeatmap.ZIGZAG_TIME), Is.TypeOf<Tap>(), "half beat sliders zigzag in the expert chart");
+            assertFlickBetween(noteAt(converted, NoteTypesBeatmap.SHORT_SLIDER_TIME), 4);
+        }
+
+        [Test]
+        public void TestNoFlicksWithoutTheMod()
+        {
+            var converted = convert(NoteTypesBeatmap.Create(new OsuRuleset().RulesetInfo));
+
+            Assert.That(converted.HitObjects.OfType<Flick>(), Is.Empty);
+        }
+
+        [Test]
+        public void TestFlicksPointTheWayTheirSliderMoves()
+        {
+            const string beatmap = @"osu file format v14
+
+[Difficulty]
+CircleSize:4
+SliderMultiplier:1
+
+[TimingPoints]
+0,500,4,1,0,100,1,0
+
+[HitObjects]
+400,192,1000,2,0,L|350:192,1,50
+88,192,3000,2,0,L|88:242,1,50
+424,192,5000,2,0,L|424:242,1,50
+32,192,7000,2,0,L|0:192,1,32
+";
+
+            var converted = convert(LegacyTestBeatmap.Decode(beatmap, new OsuRuleset().RulesetInfo), flicks: true);
+
+            assertFlickBetween(noteAt(converted, 1000), 5, "a slider moving left from lane 6 flicks between lanes 5 and 6");
+            assertFlickBetween(noteAt(converted, 3000), 1, "a slider that doesn't move sideways flicks towards the centre");
+            assertFlickBetween(noteAt(converted, 5000), 6, "a slider that doesn't move sideways flicks towards the centre");
+            assertFlickBetween(noteAt(converted, 7000), 0, "a slider moving left from the leftmost lane flicks into the next lane over");
+        }
+
+        private static void assertFlickBetween(BreveHitObject note, int leftLane, string? message = null)
+        {
+            Assert.That(note, Is.TypeOf<Flick>(), message);
+            Assert.That(note.Lane, Is.EqualTo(leftLane), message);
+            Assert.That(note.X, Is.EqualTo((BrevePlayfield.LaneX(leftLane) + BrevePlayfield.LaneX(leftLane + 1)) / 2), message);
+        }
+
         private static BreveHitObject noteAt(Beatmap<BreveHitObject> beatmap, double time) => beatmap.HitObjects.Single(h => Precision.AlmostEquals(h.StartTime, time));
 
         [Test]
@@ -350,12 +414,15 @@ namespace osu.Game.Rulesets.Breve.Tests
             Assert.That(noteAt(converted, NoteTypesBeatmap.BEAT_SLIDER_TIME), Is.TypeOf<Hold>());
         }
 
-        private static Beatmap<BreveHitObject> convert(IBeatmap beatmap, bool expert = false)
+        private static Beatmap<BreveHitObject> convert(IBeatmap beatmap, bool expert = false, bool flicks = false)
         {
             var converter = new BreveRuleset().CreateBeatmapConverter(beatmap);
 
             if (expert)
                 new BreveModExpert().ApplyToBeatmapConverter(converter);
+
+            if (flicks)
+                new BreveModFlicks().ApplyToBeatmapConverter(converter);
 
             return (Beatmap<BreveHitObject>)converter.Convert();
         }

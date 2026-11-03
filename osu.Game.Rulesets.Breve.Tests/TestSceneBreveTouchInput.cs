@@ -142,10 +142,6 @@ namespace osu.Game.Rulesets.Breve.Tests
             AddAssert("only the kept hold is hit", () => resultsAt(DoublesBeatmap.HOLD_TIME).Count(r => r.IsHit), () => Is.EqualTo(1));
         }
 
-        /// <summary>
-        /// Runs an action on the first frame the gameplay clock reaches a time.
-        /// Test steps run too far apart to touch notes within their hit windows, so this checks every frame instead.
-        /// </summary>
         private void atTime(double time, Action action) => Add(new TimedAction(() => currentTime >= time, action));
 
         private double currentTime => Player.DrawableRuleset.FrameStableClock.CurrentTime;
@@ -156,28 +152,5 @@ namespace osu.Game.Rulesets.Breve.Tests
 
         private Touch touchAt(TouchSource source, int lane)
             => new Touch(source, Player.DrawableRuleset.Playfield.ToScreenSpace(new Vector2(BrevePlayfield.LaneX(lane), BrevePlayfield.BASE_SIZE.Y / 2)));
-
-        private partial class TimedAction : Drawable
-        {
-            private readonly Func<bool> due;
-            private readonly Action action;
-
-            public TimedAction(Func<bool> due, Action action)
-            {
-                this.due = due;
-                this.action = action;
-            }
-
-            protected override void Update()
-            {
-                base.Update();
-
-                if (!due())
-                    return;
-
-                action();
-                Expire();
-            }
-        }
     }
 }

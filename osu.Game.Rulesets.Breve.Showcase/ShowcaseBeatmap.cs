@@ -10,12 +10,22 @@ namespace osu.Game.Rulesets.Breve.Showcase
     /// A short osu! beatmap at 150 BPM, so one measure (1600ms) per sweep, with every kind of note osu!breve's normal chart has:
     /// taps, holds, a long hold across two sweeps, a spinner's centre hold, zigzags, diagonal and straight drag chains, doubles and a double hold.
     /// </summary>
+    /// <remarks>
+    /// It ends with a passage of short sliders for the mods that change them (from <see cref="SHORT_SLIDERS_TIME"/>), which the normal chart plays as taps:
+    /// half beat sliders, which the Expert mod turns into zigzags and the Flicks mod into flicks, and quarter beat sliders, which become flicks either way.
+    /// Some of them are accented, and become doubles.
+    /// </remarks>
     public static class ShowcaseBeatmap
     {
         /// <summary>
-        /// When the capture ends: a little after the last note, once it has been hit.
+        /// When the capture of the normal chart ends: a little after its last note, once it has been hit.
         /// </summary>
         public const double CAPTURE_END_TIME = 20800;
+
+        /// <summary>
+        /// When the passage of short sliders starts.
+        /// </summary>
+        public const double SHORT_SLIDERS_TIME = 20800;
 
         private const string beatmap = @"osu file format v14
 
@@ -73,6 +83,15 @@ SliderTickRate:1
 144,192,18000,2,0,L|244:192,1,100
 256,192,18800,1,4,0:0:0:0:
 144,192,19200,6,4,L|144:392,1,200
+88,192,20800,6,4,L|138:192,1,50
+424,192,21200,2,0,L|374:192,1,50
+200,192,21600,2,0,L|250:192,1,50
+312,192,22000,2,0,L|262:192,1,50
+144,192,22400,6,4,L|169:192,1,25
+368,192,22800,2,0,L|393:192,1,25
+88,192,23200,2,4,L|63:192,1,25
+256,192,23600,2,0,L|256:217,1,25
+256,192,24000,5,4,0:0:0:0:
 ";
 
         public static Beatmap Create(RulesetInfo ruleset)

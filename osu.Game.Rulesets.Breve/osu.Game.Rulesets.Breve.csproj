@@ -5,7 +5,12 @@
     <Description>follow the scan line. to the measure.</Description>
   </PropertyGroup>
 
-  <ItemGroup Label="Package References">
+  <ItemGroup Label="Package References" Condition="'$(OsuRepository)' == ''">
     <PackageReference Include="ppy.osu.Game" Version="$(OsuVersion)" />
+  </ItemGroup>
+
+  <!-- osu! from source, set by osu.local.props. -->
+  <ItemGroup Label="Project References" Condition="'$(OsuRepository)' != ''">
+    <ProjectReference Include="$(OsuRepository)osu.Game\osu.Game.csproj" />
   </ItemGroup>
 </Project>

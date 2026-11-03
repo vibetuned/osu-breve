@@ -2,7 +2,6 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
-using osu.Framework.Input;
 using osu.Game.Rulesets.Breve.Beatmaps;
 
 namespace osu.Game.Rulesets.Breve.UI
@@ -31,18 +30,15 @@ namespace osu.Game.Rulesets.Breve.UI
         private const float glow_alpha = 0.25f;
 
         private readonly PageTiming pageTiming;
-        private readonly Container line;
-
-        private InputManager? inputManager;
+        private readonly ScreenWideBand line;
 
         public ScanLine(PageTiming pageTiming)
         {
             this.pageTiming = pageTiming;
 
             RelativeSizeAxes = Axes.Both;
-            InternalChild = line = new Container
+            InternalChild = line = new ScreenWideBand
             {
-                Origin = Anchor.CentreLeft,
                 Height = core_thickness + 2 * glow_reach,
                 Children = new Drawable[]
                 {
@@ -77,20 +73,6 @@ namespace osu.Game.Rulesets.Breve.UI
             base.Update();
 
             line.Y = BrevePlayfield.ScanLineY(pageTiming.PositionAt(Time.Current));
-
-            // The line stays in the playfield's space so that it lines up exactly with the notes, but reaches out to the edges of the screen,
-            // which the ruleset's input manager covers.
-            inputManager ??= GetContainingInputManager();
-
-            if (inputManager == null)
-                return;
-
-            var screen = inputManager.ScreenSpaceDrawQuad;
-            float left = ToLocalSpace(screen.TopLeft).X;
-            float right = ToLocalSpace(screen.TopRight).X;
-
-            line.X = left;
-            line.Width = right - left;
         }
     }
 }

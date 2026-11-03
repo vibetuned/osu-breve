@@ -36,28 +36,36 @@ namespace osu.Game.Rulesets.Breve.Tests
         {
             var ruleset = new OsuRuleset().RulesetInfo;
 
-            foreach (var beatmap in new IBeatmap[] { LayoutBeatmap.Create(ruleset), NoteTypesBeatmap.Create(ruleset), DoublesBeatmap.Create(ruleset) })
-                assertNoOverlaps(beatmap, allowedOverlap: 0);
+            foreach (bool flicks in new[] { false, true })
+            {
+                foreach (var beatmap in new IBeatmap[] { LayoutBeatmap.Create(ruleset), NoteTypesBeatmap.Create(ruleset), DoublesBeatmap.Create(ruleset) })
+                    assertNoOverlaps(beatmap, allowedOverlap: 0, flicks: flicks);
+            }
         }
 
-        [TestCase(false)]
-        [TestCase(true)]
-        public void TestDensePassagesOnlyOverlapSlightly(bool expert)
+        [TestCase(false, false)]
+        [TestCase(true, false)]
+        [TestCase(false, true)]
+        [TestCase(true, true)]
+        public void TestDensePassagesOnlyOverlapSlightly(bool expert, bool flicks)
         {
             // osu!'s test beatmap has passages too dense for every note to find a clear lane, where notes go where they overlap least instead.
-            assertNoOverlaps(new TestBeatmap(new OsuRuleset().RulesetInfo), allowedOverlap: 0.25f, expert);
+            assertNoOverlaps(new TestBeatmap(new OsuRuleset().RulesetInfo), allowedOverlap: 0.25f, expert, flicks);
         }
 
         /// <summary>
         /// Asserts that no two notes on screen at the same time overlap by more than a proportion of the smaller one's diameter,
-        /// and that no note is in a lane while a hold in it is held.
+        /// and that no note is in a lane while a hold in it is held. Flicks sit between two lanes, and are played with both.
         /// </summary>
-        private static void assertNoOverlaps(IBeatmap beatmap, float allowedOverlap, bool expert = false)
+        private static void assertNoOverlaps(IBeatmap beatmap, float allowedOverlap, bool expert = false, bool flicks = false)
         {
             var converter = new BreveRuleset().CreateBeatmapConverter(beatmap);
 
             if (expert)
                 new BreveModExpert().ApplyToBeatmapConverter(converter);
+
+            if (flicks)
+                new BreveModFlicks().ApplyToBeatmapConverter(converter);
 
             var notes = ((Beatmap<BreveHitObject>)converter.Convert()).HitObjects;
 
@@ -74,14 +82,14 @@ namespace osu.Game.Rulesets.Breve.Tests
 
                     // Taps are wider than lanes, so notes in neighbouring lanes can overlap too.
                     bool onScreenTogether = a.StartTime - a.TimePreempt < b.GetEndTime() && b.StartTime - b.TimePreempt < a.GetEndTime();
-                    float horizontalDistance = Math.Abs(a.Lane - b.Lane) * BrevePlayfield.LaneWidth;
+                    float horizontalDistance = Math.Abs(a.X - b.X);
                     float verticalDistance = a.Y - b.Y;
                     float overlap = (a.Diameter + b.Diameter) / 2 - MathF.Sqrt(horizontalDistance * horizontalDistance + verticalDistance * verticalDistance);
 
                     Assert.That(onScreenTogether && overlap > allowedOverlap * Math.Min(a.Diameter, b.Diameter), Is.False,
                         $"The notes at {a.StartTime}ms (lane {a.Lane}) and {b.StartTime}ms (lane {b.Lane}) overlap by {overlap:F0}");
 
-                    if (a.Lane != b.Lane)
+                    if (a.Lane > lastLaneOf(b) || b.Lane > lastLaneOf(a))
                         continue;
 
                     bool duringHold = (a is Hold && b.StartTime <= a.GetEndTime()) || (b is Hold && a.GetEndTime() >= b.StartTime);
@@ -90,6 +98,8 @@ namespace osu.Game.Rulesets.Breve.Tests
                 }
             }
         }
+
+        private static int lastLaneOf(BreveHitObject note) => note is Flick ? note.Lane + 1 : note.Lane;
 
         private static Beatmap<BreveHitObject> convert(IBeatmap beatmap) => (Beatmap<BreveHitObject>)new BreveRuleset().CreateBeatmapConverter(beatmap).Convert();
     }

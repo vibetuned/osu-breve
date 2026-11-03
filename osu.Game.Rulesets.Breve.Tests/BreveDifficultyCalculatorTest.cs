@@ -26,6 +26,14 @@ namespace osu.Game.Rulesets.Breve.Tests
         }
 
         [Test]
+        public void TestFlicksAreHarder()
+        {
+            var beatmap = NoteTypesBeatmap.Create(new OsuRuleset().RulesetInfo);
+
+            Assert.That(calculate(beatmap, new BreveModFlicks()).StarRating, Is.GreaterThan(calculate(beatmap).StarRating));
+        }
+
+        [Test]
         public void TestExpertIsHarderThanNormal()
         {
             var beatmap = new TestBeatmap(new OsuRuleset().RulesetInfo);

@@ -16,6 +16,11 @@ namespace osu.Game.Rulesets.Breve.Difficulty.Preprocessing
         public bool IsPress => BaseObject is not DragNode;
 
         /// <summary>
+        /// Whether the note is a flick, which is played with a quick move from one lane to the next.
+        /// </summary>
+        public bool IsFlick => BaseObject is Flick;
+
+        /// <summary>
         /// Whether the note is played at the same time as the one before it, as the second note of a double.
         /// </summary>
         public bool IsDoublePartner => DeltaTime < 1;

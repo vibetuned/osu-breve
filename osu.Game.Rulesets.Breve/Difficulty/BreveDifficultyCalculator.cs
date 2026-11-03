@@ -100,6 +100,7 @@ namespace osu.Game.Rulesets.Breve.Difficulty
             new BreveModDoubleTime(),
             new BreveModHalfTime(),
             new BreveModExpert(),
+            new BreveModFlicks(),
         };
     }
 }

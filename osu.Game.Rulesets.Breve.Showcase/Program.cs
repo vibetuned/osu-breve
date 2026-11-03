@@ -1,10 +1,12 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using osu.Framework;
 using osu.Framework.Platform;
+using osu.Game.Rulesets.Mods;
 using osu.Game.Tests.Visual;
 
 namespace osu.Game.Rulesets.Breve.Showcase
@@ -14,8 +16,9 @@ namespace osu.Game.Rulesets.Breve.Showcase
     /// scripts/make-media.sh turns the frames into the README's video, GIF and screenshots.
     /// </summary>
     /// <remarks>
-    /// Usage: <c>osu.Game.Rulesets.Breve.Showcase &lt;output folder&gt; [start time] [end time]</c>, with the times in milliseconds,
-    /// so that a short stretch can be captured to check a change.
+    /// Usage: <c>osu.Game.Rulesets.Breve.Showcase &lt;output folder&gt; [start time] [end time] [mods]</c>,
+    /// with the times in milliseconds, so that a short stretch can be captured to check a change,
+    /// and the mods as their acronyms separated by commas, such as <c>EX,FK</c>.
     /// </remarks>
     public static class Program
     {
@@ -24,7 +27,7 @@ namespace osu.Game.Rulesets.Breve.Showcase
         {
             if (args.Length == 0)
             {
-                Console.Error.WriteLine("Usage: osu.Game.Rulesets.Breve.Showcase <output folder> [start time] [end time]");
+                Console.Error.WriteLine("Usage: osu.Game.Rulesets.Breve.Showcase <output folder> [start time] [end time] [mods]");
                 return 2;
             }
 
@@ -34,6 +37,7 @@ namespace osu.Game.Rulesets.Breve.Showcase
             string output = Path.GetFullPath(args[0]);
             double start = args.Length > 1 ? double.Parse(args[1], CultureInfo.InvariantCulture) : 0;
             double end = args.Length > 2 ? double.Parse(args[2], CultureInfo.InvariantCulture) : ShowcaseBeatmap.CAPTURE_END_TIME;
+            Mod[] mods = args.Length > 3 ? modsFor(args[3]) : Array.Empty<Mod>();
 
             int result = 0;
             string storagePath;
@@ -41,7 +45,7 @@ namespace osu.Game.Rulesets.Breve.Showcase
             using (DesktopGameHost host = Host.GetSuitableDesktopHost(@"osu-breve-showcase"))
             {
                 var runner = new OsuTestScene.OsuTestSceneTestRunner();
-                var capture = new ShowcaseCapture(output, start, end);
+                var capture = new ShowcaseCapture(output, mods, start, end);
 
                 // The window has to run on the main thread on macOS, so the capture is driven from another.
                 Task.Run(() =>
@@ -80,6 +84,13 @@ namespace osu.Game.Rulesets.Breve.Showcase
             }
 
             return result;
+        }
+
+        private static Mod[] modsFor(string acronyms)
+        {
+            var ruleset = new BreveRuleset();
+
+            return acronyms.Split(',').Select(acronym => ruleset.CreateModFromAcronym(acronym) ?? throw new ArgumentException($"osu!breve has no {acronym} mod")).ToArray();
         }
     }
 }

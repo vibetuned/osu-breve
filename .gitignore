@@ -6,6 +6,9 @@ artifacts/
 # Frames captured by osu.Game.Rulesets.Breve.Showcase
 /frames/
 
+# Points osu!breve at a local osu! checkout (see BundleBreve.targets)
+osu.local.props
+
 # Test results
 TestResults/
 *.trx

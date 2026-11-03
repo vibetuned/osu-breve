@@ -2,6 +2,7 @@ using System.Linq;
 using NUnit.Framework;
 using osu.Framework.Utils;
 using osu.Game.Beatmaps;
+using osu.Game.Rulesets.Breve.Mods;
 using osu.Game.Rulesets.Breve.Objects;
 using osu.Game.Rulesets.Osu;
 
@@ -49,6 +50,55 @@ namespace osu.Game.Rulesets.Breve.Tests
                 var notes = notesAt(time);
                 Assert.That(notes.Count(n => (n is Hold hold ? hold.PressSamples : n.Samples).Any()), Is.EqualTo(1));
             }
+        }
+
+        // A flick's lane is the left one of the two it sits between, so flicks are in lanes 0 to 7, and mirror around the middle of the centre lane.
+        [TestCase(2000, 1, 6)]
+        [TestCase(4500, 3, 1)]
+        [TestCase(6250, 1, 3)]
+        public void TestAccentedFlicksBecomeDoubleFlicks(double time, int lane, int partnerLane)
+        {
+            var notes = flicksAt(time);
+
+            Assert.That(notes.Select(n => n.Lane), Is.EquivalentTo(new[] { lane, partnerLane }));
+            Assert.That(notes, Is.All.TypeOf<Flick>());
+            Assert.That(notes.Count(n => n.Samples.Any()), Is.EqualTo(1), "only one flick plays the hitsound");
+        }
+
+        [Test]
+        public void TestUnaccentedFlicksStaySingle()
+        {
+            Assert.That(flicksAt(8000), Has.Exactly(1).Items);
+        }
+
+        /// <summary>
+        /// Converts, with flicks, an osu! beatmap at 120 BPM in 4/4 with a half beat slider moving right in each of the places that decide how double flicks are paired:
+        /// accented on a downbeat (from lane 1), on a beat next to the centre lane (from lane 3, whose mirror would share the centre lane), off the beat (from lane 1),
+        /// and unaccented.
+        /// </summary>
+        private static BreveHitObject[] flicksAt(double time)
+        {
+            const string beatmap = @"osu file format v14
+
+[Difficulty]
+CircleSize:4
+SliderMultiplier:1
+
+[TimingPoints]
+0,500,4,1,0,100,1,0
+
+[HitObjects]
+88,192,2000,2,4,L|138:192,1,50
+200,192,4500,2,4,L|250:192,1,50
+88,192,6250,2,4,L|138:192,1,50
+88,192,8000,2,0,L|138:192,1,50
+";
+
+            var converter = new BreveRuleset().CreateBeatmapConverter(LegacyTestBeatmap.Decode(beatmap, new OsuRuleset().RulesetInfo));
+            new BreveModFlicks().ApplyToBeatmapConverter(converter);
+
+            var converted = (Beatmap<BreveHitObject>)converter.Convert();
+            return converted.HitObjects.Where(h => Precision.AlmostEquals(h.StartTime, time)).ToArray();
         }
 
         private static BreveHitObject[] notesAt(double time)

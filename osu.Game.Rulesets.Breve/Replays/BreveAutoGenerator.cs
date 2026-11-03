@@ -23,6 +23,11 @@ namespace osu.Game.Rulesets.Breve.Replays
         private const double drag_lead = 10;
 
         /// <summary>
+        /// How long before a flick the lane it's flicked from is pressed.
+        /// </summary>
+        private const double flick_lead = 30;
+
+        /// <summary>
         /// How long before pressing an action again it is let go of, so that the new press registers.
         /// </summary>
         private const double release_gap = 5;
@@ -65,6 +70,15 @@ namespace osu.Game.Rulesets.Breve.Replays
 
                     case DragNode:
                         presses.Add(new Press(hitObject.StartTime - drag_lead, laneAction, false) { End = hitObject.StartTime + press_duration });
+                        break;
+
+                    // Flicks are played by moving from one of their lanes to the other: rightwards on upward sweeps, and leftwards on downward ones.
+                    case Flick:
+                        int fromLane = hitObject.OnUpwardPage ? hitObject.Lane : hitObject.Lane + 1;
+                        int toLane = hitObject.OnUpwardPage ? hitObject.Lane + 1 : hitObject.Lane;
+
+                        presses.Add(new Press(hitObject.StartTime - flick_lead, BreveAction.Lane1 + fromLane, false) { End = hitObject.StartTime });
+                        presses.Add(new Press(hitObject.StartTime, BreveAction.Lane1 + toLane, true) { End = hitObject.StartTime + press_duration });
                         break;
                 }
             }

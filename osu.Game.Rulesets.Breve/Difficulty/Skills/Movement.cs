@@ -16,6 +16,11 @@ namespace osu.Game.Rulesets.Breve.Difficulty.Skills
         /// </summary>
         private const double min_movement_time = 50;
 
+        /// <summary>
+        /// How long the quick move across a flick, one lane over, is taken to last.
+        /// </summary>
+        private const double flick_movement_time = 150;
+
         protected override double SkillMultiplier => 1;
 
         protected override double StrainDecayBase => 0.15;
@@ -29,12 +34,14 @@ namespace osu.Game.Rulesets.Breve.Difficulty.Skills
         {
             var note = (BreveDifficultyHitObject)current;
 
-            // A double's second note is reached at the same time as the first, by the other hand.
-            if (note.IsDoublePartner)
-                return 0;
+            // In lanes per second. A flick is a move of its own, across it, on top of the move to reach it.
+            double flickSpeed = note.IsFlick ? 1 / flick_movement_time * 1000 : 0;
 
-            // In lanes per second.
-            return note.LaneDistance / Math.Max(note.MovementTime, min_movement_time) * 1000;
+            // A double's second note is reached at the same time as the first, by the other hand, though a flick still has to be flicked.
+            if (note.IsDoublePartner)
+                return flickSpeed;
+
+            return note.LaneDistance / Math.Max(note.MovementTime, min_movement_time) * 1000 + flickSpeed;
         }
     }
 }

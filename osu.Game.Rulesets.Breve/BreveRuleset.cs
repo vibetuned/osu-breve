@@ -59,10 +59,13 @@ namespace osu.Game.Rulesets.Breve
                     return new Mod[] { new BreveModNoFail(), new BreveModHalfTime() };
 
                 case ModType.DifficultyIncrease:
-                    return new Mod[] { new BreveModDoubleTime(), new BreveModExpert() };
+                    return new Mod[] { new BreveModDoubleTime(), new BreveModExpert(), new BreveModFlicks() };
 
                 case ModType.Automation:
                     return new Mod[] { new BreveModAutoplay() };
+
+                case ModType.Fun:
+                    return new Mod[] { new BreveModBorderLines() };
 
                 default:
                     return Array.Empty<Mod>();

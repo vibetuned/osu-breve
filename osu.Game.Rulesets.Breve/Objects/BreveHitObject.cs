@@ -1,5 +1,6 @@
 using osu.Game.Rulesets.Breve.Beatmaps;
 using osu.Game.Rulesets.Breve.Scoring;
+using osu.Game.Rulesets.Breve.UI;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Rulesets.Scoring;
@@ -42,9 +43,14 @@ namespace osu.Game.Rulesets.Breve.Objects
         public double PageStartTime { get; set; }
 
         /// <summary>
-        /// The lane the object is in, counting from the left. Its x position is the lane's centre.
+        /// The lane the object is in, counting from the left. Its x position is given by <see cref="XInLane"/>.
         /// </summary>
         public int Lane { get; set; }
+
+        /// <summary>
+        /// The x position of the object when it's in a lane: the lane's centre.
+        /// </summary>
+        public virtual float XInLane(int lane) => BrevePlayfield.LaneX(lane);
 
         public Vector2 Position { get; set; }
 

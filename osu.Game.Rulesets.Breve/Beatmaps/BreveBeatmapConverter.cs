@@ -19,8 +19,8 @@ namespace osu.Game.Rulesets.Breve.Beatmaps
     /// </summary>
     /// <remarks>
     /// Sliders that come back become drag chains. Other sliders and spinners become holds when they're long enough, and shorter sliders zigzags across the playfield
-    /// (see <see cref="Expert"/> for how long). Everything else becomes a tap.
-    /// Taps and holds that would clash with another note are then moved to a nearby lane, and those with a finish hitsound, the mapper's accents, become doubles.
+    /// (see <see cref="Expert"/> for how long). With <see cref="Flicks"/>, sliders too short for either become flicks. Everything else becomes a tap.
+    /// Taps, holds and flicks that would clash with another note are then moved to a nearby lane, and taps and holds with a finish hitsound, the mapper's accents, become doubles.
     /// </remarks>
     public class BreveBeatmapConverter : BeatmapConverter<BreveHitObject>
     {
@@ -48,6 +48,11 @@ namespace osu.Game.Rulesets.Breve.Beatmaps
         private const int centre_lane = BrevePlayfield.LANE_COUNT / 2;
 
         /// <summary>
+        /// The rightmost lane a flick can be in, as it sits between its lane and the next one.
+        /// </summary>
+        private const int last_flick_lane = BrevePlayfield.LANE_COUNT - 2;
+
+        /// <summary>
         /// How far the links of a drag chain may move sideways for each unit they travel with the scan line.
         /// At 1, links never slope by more than 45° away from the direction the scan line moves in.
         /// </summary>
@@ -73,6 +78,12 @@ namespace osu.Game.Rulesets.Breve.Beatmaps
         /// The expert chart has holds for sliders of a beat or more, and zigzags for sliders from half a beat, so that every run of short sliders swings across the playfield.
         /// </remarks>
         public bool Expert { get; set; }
+
+        /// <summary>
+        /// Whether the short sliders that would otherwise become taps become <see cref="Flick"/>s instead:
+        /// those shorter than a beat in the normal chart, and shorter than half a beat in the expert chart, where the longer ones are zigzags.
+        /// </summary>
+        public bool Flicks { get; set; }
 
         /// <summary>
         /// How many beats a slider or spinner has to last to become a hold.
@@ -132,6 +143,12 @@ namespace osu.Game.Rulesets.Breve.Beatmaps
 
                     break;
 
+                // Sliders too short for anything else ask for a quick move across lanes, rather than just a tap.
+                case IHasPathWithRepeats slider when Flicks:
+                    yield return createFlick(original, slider);
+
+                    break;
+
                 default:
                     yield return place(new Tap { Samples = headSamples(original) }, original.StartTime, laneOf(original));
 
@@ -183,6 +200,25 @@ namespace osu.Game.Rulesets.Breve.Beatmaps
 
             int direction = lane < centre_lane ? 1 : lane > centre_lane ? -1 : onUpwardPage ? 1 : -1;
             return Math.Clamp(lane + direction * min_zigzag_distance, 0, BrevePlayfield.LANE_COUNT - 1);
+        }
+
+        /// <summary>
+        /// Creates a flick from a slider, at its head, on the boundary between the head's lane and the next one in the direction the slider moves.
+        /// A slider that doesn't move sideways points towards the centre lane, or from the centre lane itself, right on upward sweeps and left on downward ones.
+        /// </summary>
+        private Flick createFlick(HitObject original, IHasPathWithRepeats slider)
+        {
+            int lane = laneOf(original);
+            float travel = slider.CurvePositionAt(1).X;
+
+            int direction = Math.Abs(travel) >= 1 ? Math.Sign(travel)
+                : lane != centre_lane ? Math.Sign(centre_lane - lane)
+                : pageTiming.PageAt(original.StartTime).MovesUpwards ? 1 : -1;
+
+            // A flick's lane is the left one of the two it sits between.
+            int leftLane = Math.Clamp(direction > 0 ? lane : lane - 1, 0, last_flick_lane);
+
+            return place(new Flick { Samples = headSamples(original) }, original.StartTime, leftLane);
         }
 
         private Hold createHold(HitObject original, IHasDuration hasDuration)
@@ -312,13 +348,15 @@ namespace osu.Game.Rulesets.Breve.Beatmaps
         private float scanLineYAt(double time) => BrevePlayfield.ScanLineY(pageTiming.PositionAt(time));
 
         /// <summary>
-        /// Turns accented taps and holds, those with a finish hitsound, into doubles.
+        /// Turns accented taps, holds and flicks, those with a finish hitsound, into doubles.
         /// </summary>
         /// <remarks>
         /// Where a note falls in the measure decides where its partner goes: on a downbeat it's mirrored around the centre lane,
         /// on any other beat it's in the centre lane, and off the beat it's two lanes away on the same side.
         /// A note already in the centre lane, which can be neither mirrored nor partnered with it, gets its partner three lanes away instead,
         /// on the right on upward sweeps and on the left on downward ones.
+        /// Flicks sit between lanes, so they have no centre lane to pair with: on any beat their partner is mirrored, and off the beat it's two boundaries over on the same side
+        /// (see <see cref="mirroredFlickLane"/> and <see cref="sameSideFlickLane"/>).
         /// If a partner's lane is taken by another note around that time, the next of those placements is tried, and the note stays single if none are free.
         /// </remarks>
         private void addDoubles(Beatmap<BreveHitObject> beatmap)
@@ -327,7 +365,7 @@ namespace osu.Game.Rulesets.Breve.Beatmaps
 
             foreach (var note in beatmap.HitObjects)
             {
-                if (note is not (Tap or Hold) || !isAccented(note))
+                if (note is not (Tap or Hold or Flick) || !isAccented(note))
                     continue;
 
                 var timingPoint = beatmap.ControlPointInfo.TimingPointAt(note.StartTime);
@@ -335,13 +373,25 @@ namespace osu.Game.Rulesets.Breve.Beatmaps
                 bool onBeat = Math.Abs(beats - Math.Round(beats)) < on_beat_leniency;
                 bool onDownbeat = onBeat && (long)Math.Round(beats) % timingPoint.TimeSignature.Numerator == 0;
 
-                int? mirrored = note.Lane == centre_lane ? null : BrevePlayfield.LANE_COUNT - 1 - note.Lane;
-                int? withCentre = note.Lane == centre_lane ? centre_lane + (note.OnUpwardPage ? centre_partner_distance : -centre_partner_distance) : centre_lane;
-                int? sameSide = sameSideLane(note.Lane);
+                int?[] placements;
 
-                var placements = onDownbeat ? new[] { mirrored, withCentre, sameSide }
-                    : onBeat ? new[] { withCentre, mirrored, sameSide }
-                    : new[] { sameSide, withCentre, mirrored };
+                if (note is Flick)
+                {
+                    int? mirrored = mirroredFlickLane(note.Lane);
+                    int? sameSide = sameSideFlickLane(note.Lane);
+
+                    placements = onBeat ? new[] { mirrored, sameSide } : new[] { sameSide, mirrored };
+                }
+                else
+                {
+                    int? mirrored = note.Lane == centre_lane ? null : BrevePlayfield.LANE_COUNT - 1 - note.Lane;
+                    int? withCentre = note.Lane == centre_lane ? centre_lane + (note.OnUpwardPage ? centre_partner_distance : -centre_partner_distance) : centre_lane;
+                    int? sameSide = sameSideLane(note.Lane);
+
+                    placements = onDownbeat ? new[] { mirrored, withCentre, sameSide }
+                        : onBeat ? new[] { withCentre, mirrored, sameSide }
+                        : new[] { sameSide, withCentre, mirrored };
+                }
 
                 // The partner is checked against the original note too, as it can be too close to it in a neighbouring lane.
                 var partner = placements.Where(lane => lane != null)
@@ -356,7 +406,7 @@ namespace osu.Game.Rulesets.Breve.Beatmaps
         }
 
         /// <summary>
-        /// Moves taps and holds that clash with an earlier note, or with any drag chain, to the nearest lane where they don't.
+        /// Moves taps, holds and flicks that clash with an earlier note, or with any drag chain, to the nearest lane where they don't.
         /// One lane over is tried first, to the right on upward sweeps and to the left on downward ones, then two lanes over, and so on.
         /// Drag chains are never moved, so that they keep their shape.
         /// In passages too dense for any lane to be clear, a note goes where it overlaps other notes the least, but never into a lane held for a hold.
@@ -390,7 +440,7 @@ namespace osu.Game.Rulesets.Breve.Beatmaps
                 if (lane != note.Lane)
                 {
                     note.Lane = lane;
-                    note.Position = new Vector2(BrevePlayfield.LaneX(lane), note.Y);
+                    note.Position = new Vector2(note.XInLane(lane), note.Y);
                 }
 
                 placed.Add(note);
@@ -405,12 +455,13 @@ namespace osu.Game.Rulesets.Breve.Beatmaps
             yield return note.Lane;
 
             int direction = note.OnUpwardPage ? 1 : -1;
+            int lastLane = note is Flick ? last_flick_lane : BrevePlayfield.LANE_COUNT - 1;
 
             for (int distance = 1; distance < BrevePlayfield.LANE_COUNT; distance++)
             {
                 foreach (int lane in new[] { note.Lane + direction * distance, note.Lane - direction * distance })
                 {
-                    if (lane >= 0 && lane < BrevePlayfield.LANE_COUNT)
+                    if (lane >= 0 && lane <= lastLane)
                         yield return lane;
                 }
             }
@@ -424,7 +475,7 @@ namespace osu.Game.Rulesets.Breve.Beatmaps
         /// <summary>
         /// How badly a note would clash with some other notes if it were in a lane:
         /// by how far, in playfield units, it would overlap the one it overlaps most of those on screen at the same time
-        /// (taps are wider than lanes, so that includes notes in neighbouring lanes), and infinitely if the lane's key is held down for a hold then.
+        /// (taps are wider than lanes, so that includes notes in neighbouring lanes), and infinitely if one of its lanes' keys is held down for a hold then.
         /// 0 if it doesn't clash at all.
         /// </summary>
         private static float overlapIn(BreveHitObject note, int lane, IEnumerable<BreveHitObject> others)
@@ -436,13 +487,13 @@ namespace osu.Game.Rulesets.Breve.Beatmaps
                 if (other == note)
                     continue;
 
-                float horizontalDistance = Math.Abs(other.Lane - lane) * BrevePlayfield.LaneWidth;
+                float horizontalDistance = Math.Abs(other.X - note.XInLane(lane));
                 float minDistance = (note.Diameter + other.Diameter) / 2;
 
                 if (horizontalDistance >= minDistance)
                     continue;
 
-                if (other.Lane == lane && ((other is Hold && duringHold(note, other)) || (note is Hold && duringHold(other, note))))
+                if (shareALane(note, lane, other, other.Lane) && ((other is Hold && duringHold(note, other)) || (note is Hold && duringHold(other, note))))
                     return float.PositiveInfinity;
 
                 bool onScreenTogether = note.StartTime - note.TimePreempt < other.GetEndTime() && other.StartTime - other.TimePreempt < note.GetEndTime();
@@ -463,15 +514,51 @@ namespace osu.Game.Rulesets.Breve.Beatmaps
         }
 
         /// <summary>
+        /// Whether two notes, each in a lane, are played with any of the same lane keys. A flick is played with both lanes it sits between.
+        /// </summary>
+        private static bool shareALane(BreveHitObject first, int firstLane, BreveHitObject second, int secondLane)
+        {
+            int firstLastLane = first is Flick ? firstLane + 1 : firstLane;
+            int secondLastLane = second is Flick ? secondLane + 1 : secondLane;
+
+            return firstLane <= secondLastLane && secondLane <= firstLastLane;
+        }
+
+        /// <summary>
         /// Creates the partner of a note in a double. It's silent, as the original note already plays the hitsound.
         /// </summary>
         private BreveHitObject createPartner(BreveHitObject note, int lane)
         {
-            BreveHitObject partner = note is Hold hold
-                ? new Hold { Duration = hold.Duration, Segments = hold.Segments }
-                : new Tap();
+            BreveHitObject partner = note switch
+            {
+                Hold hold => new Hold { Duration = hold.Duration, Segments = hold.Segments },
+                Flick => new Flick(),
+                _ => new Tap(),
+            };
 
             return place(partner, note.StartTime, lane);
+        }
+
+        /// <summary>
+        /// Retrieves the lane of the flick mirroring a flick around the centre lane. Null for the two flicks either side of the centre lane,
+        /// whose mirrors are each other: they would share the centre lane, so they can't be played together.
+        /// </summary>
+        private static int? mirroredFlickLane(int lane)
+        {
+            int mirrored = last_flick_lane - lane;
+            return Math.Abs(mirrored - lane) >= 2 ? mirrored : null;
+        }
+
+        /// <summary>
+        /// Retrieves the lane of the flick two boundaries away from a flick on the same side of the centre: further out if there's room, and further in otherwise.
+        /// Flicks two boundaries apart don't share a lane, so they can be played together.
+        /// </summary>
+        private static int sameSideFlickLane(int lane)
+        {
+            if (lane < centre_lane)
+                return lane >= 2 ? lane - 2 : lane + 2;
+
+            return lane <= last_flick_lane - 2 ? lane + 2 : lane - 2;
         }
 
         /// <summary>
@@ -508,7 +595,7 @@ namespace osu.Game.Rulesets.Breve.Beatmaps
 
             hitObject.StartTime = time;
             hitObject.Lane = lane;
-            hitObject.Position = new Vector2(BrevePlayfield.LaneX(lane), BrevePlayfield.ScanLineY(pageTiming.PositionAt(time)));
+            hitObject.Position = new Vector2(hitObject.XInLane(lane), BrevePlayfield.ScanLineY(pageTiming.PositionAt(time)));
             hitObject.TimePreempt = page.Duration;
             hitObject.OnUpwardPage = page.MovesUpwards;
             hitObject.PageStartTime = page.StartTime;

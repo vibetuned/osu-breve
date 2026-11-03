@@ -1,5 +1,12 @@
 <!-- Contains the properties shared by osu!breve's projects. They follow osu!'s own, so that osu!breve is held to the same rules as osu!'s rulesets. -->
 <Project>
+  <!-- An untracked osu.local.props can set OsuRepository to an osu! checkout, to build against osu! from source rather than its published packages,
+       as bundling osu!breve into osu!'s mobile apps needs (see BundleBreve.targets). -->
+  <Import Project="$(MSBuildThisFileDirectory)osu.local.props" Condition="Exists('$(MSBuildThisFileDirectory)osu.local.props')" />
+  <PropertyGroup Label="osu!" Condition="'$(OsuRepository)' != ''">
+    <!-- A relative path is relative to this repository. -->
+    <OsuRepository>$([MSBuild]::NormalizeDirectory($(MSBuildThisFileDirectory), $(OsuRepository)))</OsuRepository>
+  </PropertyGroup>
   <PropertyGroup Label="osu!">
     <!-- The osu! release osu!breve is built against. osu! only loads rulesets built for its current ruleset API version,
          so a release of osu!breve keeps working in newer osu! releases until osu! changes that version, and then needs rebuilding against a newer osu!. -->

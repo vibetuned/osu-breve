@@ -11,6 +11,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Platform;
 using osu.Framework.Testing;
 using osu.Game.Beatmaps;
+using osu.Game.Rulesets.Mods;
 using osu.Game.Screens.Play.HUD;
 using osu.Game.Tests.Visual;
 using SixLabors.ImageSharp;
@@ -33,6 +34,7 @@ namespace osu.Game.Rulesets.Breve.Showcase
         private const int settle_frames = 3;
 
         private readonly string outputDirectory;
+        private readonly Mod[] mods;
         private readonly double startTime;
         private readonly double endTime;
 
@@ -48,9 +50,10 @@ namespace osu.Game.Rulesets.Breve.Showcase
         [Resolved]
         private GameHost host { get; set; } = null!;
 
-        public ShowcaseCapture(string outputDirectory, double startTime, double endTime)
+        public ShowcaseCapture(string outputDirectory, Mod[] mods, double startTime, double endTime)
         {
             this.outputDirectory = outputDirectory;
+            this.mods = mods;
             this.startTime = startTime;
             this.endTime = endTime;
         }
@@ -92,14 +95,16 @@ namespace osu.Game.Rulesets.Breve.Showcase
 
         public void AddCaptureSteps()
         {
-            AddStep("load player", LoadPlayer);
+            AddStep("load player", () => LoadPlayer(mods));
             AddUntilStep("player loaded", () => Player.IsLoaded && Player.Alpha == 1);
-            AddWaitStep("let the window settle", 10);
+            // Gameplay waits too, so that no notes are played before the capture starts.
+            AddStep("pause gameplay", () => Player.GameplayClockContainer.Stop());
+            // Two seconds, for the window to resize and the background to finish dimming, as the player has only just appeared.
+            AddWaitStep("let the window and background settle", (int)(2000 / TimePerAction));
             AddStep("start capturing", () =>
             {
                 Directory.CreateDirectory(outputDirectory);
 
-                Player.GameplayClockContainer.Stop();
                 frameTime = startTime;
                 Player.GameplayClockContainer.Seek(frameTime);
                 capturing = true;
